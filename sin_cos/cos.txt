@@ -1,0 +1,5 @@
+type = cos
+A = 3
+AnalogFrequency = 200
+SamplingFrequency = 500
+PhaseShift = 2.35619449019235

@@ -1,6 +1,3 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Optional ,Iterable
@@ -74,3 +71,61 @@ class Signal :
         plt.grid(True)
         plt.show()
 
+# Not Sure of the Validity of this function and if there's a better way
+# Complexity -> O(N^2)
+def validate_is_periodic(signal : Signal, eps=1e-6):
+    N = signal.size()
+    
+    for p in range(1, N//2 + 1):
+        flag = True
+        for i in range(N - p):
+            if abs(signal.y[i] - signal.y[i + p]) > eps:
+                flag = False
+                break
+        if flag:
+            return True
+    
+    return False
+
+def generate_signal(file_path: str) -> Signal:
+    params = read_gen_file(file_path)
+    
+    sig_type = params.get("type")
+    A = params.get("A")
+    F = params.get("AnalogFrequency",1.0)
+    Fs = params.get("SamplingFrequency",2*F)
+    theta = params.get("PhaseShift")
+
+    if Fs < 2*F:
+        raise ValueError(f"Sampling frequency {Fs} Hz is below Nyquist rate for F={F} Hz")
+
+    t = np.arange(0, 1, 1/Fs)  
+    if sig_type == "sin":
+        y = A * np.sin(2 * np.pi * F * t + theta)
+        name = f"Sine_{F}Hz"
+    elif sig_type == "cos":
+        y = A * np.cos(2 * np.pi * F * t + theta)
+        name = f"Cosine_{F}Hz"
+    else:
+        raise ValueError(f"Unknown signal type '{sig_type}'")
+
+    ret = Signal(name=name, signal_type=0, is_periodic=False, sample_rate=Fs, x=t, y=y)
+    return ret
+
+
+def read_gen_file(file_path: str) -> dict:
+    """Reads parameters from a .txt file for sine/cosine generation."""
+    params = {}
+    with open(file_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or '=' not in line:
+                continue
+            key, value = line.split('=', 1)
+            key = key.strip()
+            value = value.strip()
+            if key in ['A', 'AnalogFrequency' , 'SamplingFrequency', 'PhaseShift']:
+                params[key] = float(value)
+            else:
+                params[key] = value.lower() 
+    return params

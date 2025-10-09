@@ -66,3 +66,4 @@ def save_signal(signal: Signal, file_path: str):
             raise ValueError(f"Unsupported signal type: {signal.signal_type}")
     
     print(f"Signal saved successfully to '{os.path.basename(file_path)}'")
+
