@@ -9,7 +9,7 @@ import os
 
 class Signal : 
     """
-    Represents a signal in either time or frequency domain.
+    Represents a Discrete signal in either time or frequency domain.
     
     Attributes:
         name (str): Name or label of the signal.
@@ -62,7 +62,8 @@ class Signal :
             f"y: {y_preview} ...\n"
             f"phase: {phase_preview}"
         )
-
+    
+    # for Debugging 
     def plot(self):
         import matplotlib.pyplot as plt
         plt.figure()
@@ -74,7 +75,7 @@ class Signal :
         plt.show()
 
 
-def load_signal(file_path: str) -> 'Signal':
+def load_signal(file_path: str) -> Signal:
     """
     Loads a signal from a text file and returns a Signal object.
     
@@ -95,7 +96,7 @@ def load_signal(file_path: str) -> 'Signal':
     data_lines = lines[3:3 + n_samples]
 
     if signal_type == 0:
-        # Time-domain: [index, amplitude]
+        # Time-domain: [n X, amp Y]
         x_vals, y_vals = [], []
         for line in data_lines:
             idx, amp = map(float, line.split())
@@ -110,7 +111,7 @@ def load_signal(file_path: str) -> 'Signal':
         )
 
     elif signal_type == 1:
-        # Frequency-domain: [frequency, amplitude, phase]
+        # freq-domain: [frequency X, amp Y , phase Z]
         freq, amp, phase = [], [], []
         for line in data_lines:
             f_val, a_val, p_val = map(float, line.split())
@@ -128,3 +129,5 @@ def load_signal(file_path: str) -> 'Signal':
 
     else:
         raise ValueError(f"Unsupported signal type: {signal_type}")
+
+
