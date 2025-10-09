@@ -5,7 +5,7 @@
 """ 
 
 import os
-from signals import load_signal
+from fileHandling import load_signal
 from operations import (
     add_signals,
     subtract_signals,
