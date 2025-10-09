@@ -76,17 +76,6 @@ class Signal :
 
 
 def load_signal(file_path: str) -> Signal:
-    """
-    Loads a signal from a text file and returns a Signal object.
-    
-    File format:
-        [SignalType]     # 0 -> Time domain, 1 -> Frequency domain
-        [IsPeriodic]     # 0 or 1
-        [N1]             # number of samples
-        Then N1 lines of:
-            If SignalType == 0:   [Index  Amplitude]
-            If SignalType == 1:   [Frequency  Amplitude  PhaseShift]
-    """
     with open(file_path, 'r') as f:
         lines = [line.strip() for line in f if line.strip()]
 
@@ -96,7 +85,6 @@ def load_signal(file_path: str) -> Signal:
     data_lines = lines[3:3 + n_samples]
 
     if signal_type == 0:
-        # Time-domain: [n X, amp Y]
         x_vals, y_vals = [], []
         for line in data_lines:
             idx, amp = map(float, line.split())
@@ -111,7 +99,6 @@ def load_signal(file_path: str) -> Signal:
         )
 
     elif signal_type == 1:
-        # freq-domain: [frequency X, amp Y , phase Z]
         freq, amp, phase = [], [], []
         for line in data_lines:
             f_val, a_val, p_val = map(float, line.split())
@@ -131,3 +118,24 @@ def load_signal(file_path: str) -> Signal:
         raise ValueError(f"Unsupported signal type: {signal_type}")
 
 
+def save_signal(signal: Signal, file_path: str):
+    
+    with open(file_path, 'w') as f:
+        f.write(f"{signal.signal_type}\n")
+        f.write(f"{int(signal.is_periodic)}\n")
+        f.write(f"{len(signal.x)}\n")
+        
+        if signal.signal_type == 0:
+            for xi, yi in zip(signal.x, signal.y):
+                f.write(f"{xi}\t{yi}\n")
+        
+        elif signal.signal_type == 1:
+            if getattr(signal, "phase", None) is None:
+                raise ValueError("Frequency-domain signal must have a 'phase' attribute.")
+            _phase: np.ndarray = np.asarray(signal.phase)
+            for fi, ai, pi in zip(signal.x, signal.y,_phase):
+                f.write(f"{fi}\t{ai}\t{pi}\n")
+        else:
+            raise ValueError(f"Unsupported signal type: {signal.signal_type}")
+    
+    print(f"Signal saved successfully to '{os.path.basename(file_path)}'")
