@@ -71,8 +71,9 @@ class Signal :
         plt.grid(True)
         plt.show()
 
-# Not Sure of the Validity of this function and if there's a better way
+# Not Sure of the Validity of this function and if there's a better way, 
 # Complexity -> O(N^2)
+# UPDATE: INVALID FUNCTION
 def validate_is_periodic(signal : Signal, eps=1e-6):
     N = signal.size()
     
@@ -86,6 +87,7 @@ def validate_is_periodic(signal : Signal, eps=1e-6):
             return True
     
     return False
+
 
 def generate_signal(file_path: str) -> Signal:
     params = read_gen_file(file_path)
@@ -114,7 +116,8 @@ def generate_signal(file_path: str) -> Signal:
 
 
 def read_gen_file(file_path: str) -> dict:
-    """Reads parameters from a .txt file for sine/cosine generation."""
+    """Reads parameters from a .txt file for sine/cosine generation """
+    """One Signal at a Time with out double quotes """
     params = {}
     with open(file_path, 'r') as f:
         for line in f:

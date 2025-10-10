@@ -74,31 +74,31 @@ def multiply_signal_byConst(sig : Signal, const : float = 1.0, name :str = "Mult
         )
 
 
-# def normalize_signal(sig: Signal, mode: str = "-1_to_1") -> Signal:
-#     """
-#     Normalize signal amplitudes:
-#     mode = "-1_to_1" → scale between -1 and 1
-#     mode = "0_to_1"  → scale between 0 and 1
-#     """
-#     y = sig.y
-#     y_min, y_max = np.min(y), np.max(y)
-#     if y_max == y_min:
-#         raise ValueError("Cannot normalize a constant signal.")
+def normalize_signal(sig: Signal, mode: str = "-1_to_1") -> Signal:
+    """
+    Normalize signal amplitudes:
+    mode = "-1_to_1" → scale between -1 and 1
+    mode = "0_to_1"  → scale between 0 and 1
+    """
+    y = sig.y
+    y_min, y_max = np.min(y), np.max(y)
+    if y_max == y_min:
+        raise ValueError("Cannot normalize a constant signal.")
 
-#     if mode == "-1_to_1":
-#         y_new = 2 * (y - y_min) / (y_max - y_min) - 1
-#     elif mode == "0_to_1":
-#         y_new = (y - y_min) / (y_max - y_min)
-#     else:
-#         raise ValueError("Invalid mode. Use '-1_to_1' or '0_to_1'.")
+    if mode == "-1_to_1":
+        y_new = 2 * (y - y_min) / (y_max - y_min) - 1
+    elif mode == "0_to_1":
+        y_new = (y - y_min) / (y_max - y_min)
+    else:
+        raise ValueError("Invalid mode. Use '-1_to_1' or '0_to_1'.")
 
-#     return Signal(
-#         name=sig.name + "Normalized",
-#         signal_type=sig.signal_type,
-#         is_periodic=sig.is_periodic,
-#         x=sig.x,
-#         y=y_new
-#     )
+    return Signal(
+        name=sig.name + "Normalized",
+        signal_type=sig.signal_type,
+        is_periodic=sig.is_periodic,
+        x=sig.x,
+        y=y_new
+    )
 
 
 def square_signal(sig: Signal, name: str = "Squared Signal") -> Signal:
