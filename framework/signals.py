@@ -97,7 +97,6 @@ def generate_signal(file_path: str) -> Signal:
     F = params.get("AnalogFrequency",1.0)
     Fs = params.get("SamplingFrequency",2*F)
     theta = params.get("PhaseShift")
-
     if Fs < 2*F:
         raise ValueError(f"Sampling frequency {Fs} Hz is below Nyquist rate for F={F} Hz")
 
@@ -111,7 +110,8 @@ def generate_signal(file_path: str) -> Signal:
     else:
         raise ValueError(f"Unknown signal type '{sig_type}'")
 
-    ret = Signal(name=name, signal_type=0, is_periodic=False, sample_rate=Fs, x=t, y=y)
+    nx = np.arange(0,len(y),1)
+    ret = Signal(name=name, signal_type=0, is_periodic=False, sample_rate=Fs, x=nx, y=y)
     return ret
 
 

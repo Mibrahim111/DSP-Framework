@@ -10,7 +10,7 @@ from operations import (
     accumulate_signal,
     normalize_signal
 )
-from signals import Signal
+from signals import (Signal,generate_signal,read_gen_file)
 
 class DSPGui:
     def __init__(self, root):
@@ -22,12 +22,11 @@ class DSPGui:
         self.plot_mode = tk.StringVar(value="discrete")
         self.normalize_mode = tk.StringVar(value="0to1")  # default normalize range
 
-        # ===== File operations =====
         tk.Button(root, text="Load Signal 1", command=self.load_signal1).pack(pady=5)
         tk.Button(root, text="Load Signal 2", command=self.load_signal2).pack(pady=5)
         tk.Button(root, text="Save Current Signal", command=self.save_signal).pack(pady=5)
+        tk.Button(root, text="Generate Signal from File", command=self.generate_new_signal).pack(pady=5)
 
-        # ===== Operations =====
         tk.Label(root, text="Operations", font=('Arial', 12, 'bold')).pack(pady=10)
         tk.Button(root, text="Add", command=self.add).pack(pady=3)
         tk.Button(root, text="Subtract", command=self.subtract).pack(pady=3)
@@ -35,7 +34,6 @@ class DSPGui:
         tk.Button(root, text="Square", command=self.square).pack(pady=3)
         tk.Button(root, text="Accumulate", command=self.accumulate).pack(pady=3)
 
-        # ===== Normalize with mode selection =====
         tk.Label(root, text="Normalization Range", font=('Arial', 12, 'bold')).pack(pady=10)
         norm_frame = tk.Frame(root)
         norm_frame.pack()
@@ -43,7 +41,6 @@ class DSPGui:
         tk.Radiobutton(norm_frame, text="[0, 1]", variable=self.normalize_mode, value="0to1").pack(side=tk.LEFT, padx=10)
         tk.Button(root, text="Normalize", command=self.normalize).pack(pady=5)
 
-        # ===== Plot mode selection =====
         tk.Label(root, text="Plot Mode", font=('Arial', 12, 'bold')).pack(pady=10)
         plot_frame = tk.Frame(root)
         plot_frame.pack()
@@ -135,6 +132,28 @@ class DSPGui:
         else:
             messagebox.showerror("Error", "Load a signal first!")
 
+    def generate_new_signal(self):
+        """Generates a new signal from a text file containing parameters."""
+        path = filedialog.askopenfilename(title="Select Signal Parameters File", filetypes=[("Text Files", "*.txt")])
+        if path:
+            try:
+                from signals import Signal  # ensure class is available
+                self.signal1 = generate_signal(path)
+                messagebox.showinfo("Generated", f"Signal generated successfully from {path}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to generate signal: {e}")
+
+    def save_gen_signal(self):
+        if self.signal1 is None:
+            messagebox.showerror("Error", "No signal to save!")
+            return
+        path = filedialog.asksaveasfilename(defaultextension=".txt")
+        if path:
+            try:
+                save_signal(self.signal1, path)
+                messagebox.showinfo("Saved", f"Signal saved to {path}")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
     # ===== Plotting =====
     def plot_signals(self):
         if not self.signal1:
