@@ -100,12 +100,12 @@ def generate_signal(file_path: str) -> Signal:
     if Fs < 2*F:
         raise ValueError(f"Sampling frequency {Fs} Hz is below Nyquist rate for F={F} Hz")
 
-    t = np.arange(0, 1, 1/Fs)  
+    nn = np.arange(0, 1, 1/Fs)  
     if sig_type == "sin":
-        y = A * np.sin(2 * np.pi * F * t + theta)
+        y = A * np.sin(2 * np.pi * F * nn + theta)
         name = f"Sine_{F}Hz"
     elif sig_type == "cos":
-        y = A * np.cos(2 * np.pi * F * t + theta)
+        y = A * np.cos(2 * np.pi * F * nn + theta)
         name = f"Cosine_{F}Hz"
     else:
         raise ValueError(f"Unknown signal type '{sig_type}'")

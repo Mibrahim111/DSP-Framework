@@ -10,9 +10,7 @@ def list_gen_files(folder="."):
     return [f for f in os.listdir(folder) if f.endswith(".txt")]
 
 
-def main():
-    AddSignalSamplesAreEqual() # signal1 , signal2 , np.array = x , np.array = y 
-
-
+def main(): pass
+ 
 if __name__ == "__main__":
     main()

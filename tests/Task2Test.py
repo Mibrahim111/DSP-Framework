@@ -69,7 +69,7 @@ def SinCosSignalSamplesAreEqual(user_choice,file_name,indices,samples):
 def SubSignalSamplesAreEqual(userFirstSignal,userSecondSignal,Your_indices,Your_samples):
     if(userFirstSignal=='Signal1.txt' and userSecondSignal=='Signal2.txt'):
         file_name="" # write here path of signal1-signal2
-    else if(userFirstSignal=='Signal1.txt' and userSecondSignal=='Signal3.txt'):
+    elif(userFirstSignal=='Signal1.txt' and userSecondSignal=='Signal3.txt'):
         file_name="" # write here path of signal1-signal3
         
     expected_indices,expected_samples=ReadSignalFile(file_name)   
@@ -96,7 +96,7 @@ def SubSignalSamplesAreEqual(userFirstSignal,userSecondSignal,Your_indices,Your_
 def NormalizeSignal(MinRange,MaxRange,Your_indices,Your_samples):
     if(MinRange==-1 and MaxRange==1):
         file_name="" # write here path of normalize signal 1 output.txt
-    else if(MinRange==-1 and MaxRange==1):
+    elif(MinRange==-1 and MaxRange==1):
         file_name="" # write here path of normalize signal 2 output.txt
         
     expected_indices,expected_samples=ReadSignalFile(file_name)      
@@ -150,7 +150,7 @@ def SignalSamplesAreEqual(TaskName,output_file_name,Your_indices,Your_samples):
                 break
     if (len(expected_samples)!=len(Your_samples)) and (len(expected_indices)!=len(Your_indices)):
          print(TaskName+" Test case failed, your signal have different length from the expected one")
-        return
+         return
     for i in range(len(Your_indices)):
         if(Your_indices[i]!=expected_indices[i]):
             print(TaskName+" Test case failed, your signal have different indicies from the expected one") 
