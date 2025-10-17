@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
 import matplotlib.pyplot as plt
+from datetime import datetime
+import os
 from fileHandling import load_signal, save_signal
 from operations import (
     add_signals,
@@ -8,7 +10,8 @@ from operations import (
     multiply_signal_byConst,
     square_signal,
     accumulate_signal,
-    normalize_signal
+    normalize_signal,
+    quantization
 )
 from signals import (Signal,generate_signal,read_gen_file)
 
@@ -33,6 +36,8 @@ class DSPGui:
         tk.Button(root, text="Multiply by Constant", command=self.multiply_const).pack(pady=3)
         tk.Button(root, text="Square", command=self.square).pack(pady=3)
         tk.Button(root, text="Accumulate", command=self.accumulate).pack(pady=3)
+        tk.Button(root, text="Quantize Signal", command=self.Quantize).pack(pady=3)
+
 
         tk.Label(root, text="Normalization Range", font=('Arial', 12, 'bold')).pack(pady=10)
         norm_frame = tk.Frame(root)
@@ -132,12 +137,46 @@ class DSPGui:
         else:
             messagebox.showerror("Error", "Load a signal first!")
 
+    def Quantize(self):
+        if self.signal1 is None:
+            messagebox.showerror("Error", "Load a signal first!")
+            return
+
+        levels = simpledialog.askinteger("Quantization", "Enter Number of levels:")
+        if levels is None:
+            return
+
+        try:
+            # quantization() returns (quantized_signal, bits, error)
+            self.signal1, self.bits, self.error = quantization(self.signal1, levels)
+        except Exception as e:
+            messagebox.showerror("Quantization Error", str(e))
+            return
+
+        os.makedirs("outputs", exist_ok=True)
+        filename = f"outputs/quantized_signal.txt"
+
+        with open(filename, "w") as f:
+            f.write(f"Levels: {levels}\n")
+            f.write(f"Bits : {len(self.bits[0]) if self.bits else 0}\n\n")
+            f.write(f"{'Index':>6} {'Encoded':>12} {'Quantized':>12} {'Error':>12}\n")
+
+            for i, (b, q, e) in enumerate(zip(self.bits, self.signal1.y, self.error)):
+                f.write(f"{i:6d} {b:>12} {float(q):12.6f} {float(e):12.6f}\n")
+
+        messagebox.showinfo(
+            "Signal Quantized",
+            f"Quantized signal saved to:\n{filename}"
+        )
+
+        print(f"Quantization complete. Results saved to: {filename}")
+
     def generate_new_signal(self):
         """Generates a new signal from a text file containing parameters."""
         path = filedialog.askopenfilename(title="Select Signal Parameters File", filetypes=[("Text Files", "*.txt")])
         if path:
             try:
-                from signals import Signal  # ensure class is available
+                from signals import Signal 
                 self.signal1 = generate_signal(path)
                 messagebox.showinfo("Generated", f"Signal generated successfully from {path}")
             except Exception as e:

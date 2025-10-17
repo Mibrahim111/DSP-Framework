@@ -53,7 +53,7 @@ def add_signals(*signals: Signal, name: str = "Added Signal") -> Signal:
 def subtract_signals(sig1: Signal, sig2: Signal, name: str = "Subtracted Signal") -> Signal:
     """Subtract sig2 from sig1."""
     _validate_signals(sig1, sig2)
-    y_new = sig1.y - sig2.y
+    y_new = abs(sig1.y - sig2.y)
     return Signal(
         name=name,
         signal_type=sig1.signal_type,
@@ -121,3 +121,39 @@ def accumulate_signal(sig: Signal, name: str = "Acc Signal") -> Signal:
         x=sig.x,
         y=np.cumsum(sig.y)
     )
+
+
+def quantization(sig: Signal, levels: int, name: str = "Quantized Signal"):
+    """Quantize samples in sig.y into `levels` uniform levels.
+    Returns: (quantized_signal, encoded, error)
+    """
+    if levels <= 1:
+        raise ValueError("levels must be > 1")
+
+    y = np.array(sig.y, dtype=float)
+    x = np.array(sig.x) if hasattr(sig, "x") else np.arange(len(y))
+
+    y_min, y_max = np.min(y), np.max(y)
+    delta = (y_max - y_min) / levels
+
+    if delta == 0:
+        q_midpoints = np.full_like(y, y_min)
+        indices = np.zeros_like(y, dtype=int)
+    else:
+        indices = np.floor((y - y_min) / delta).astype(int)
+        indices = np.clip(indices, 0, levels - 1)
+        q_midpoints = y_min + delta * (indices + 0.5)
+
+    error = y - q_midpoints
+    n_bits = int(np.ceil(np.log2(levels)))
+    encoded = [format(int(i), f'0{n_bits}b') for i in indices]
+
+    quantized_signal = Signal(
+        name=name,
+        signal_type=sig.signal_type,
+        is_periodic=getattr(sig, "is_periodic", False),
+        x=x.tolist(),
+        y=q_midpoints.tolist()
+    )
+
+    return quantized_signal, encoded, error
