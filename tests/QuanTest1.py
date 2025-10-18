@@ -29,6 +29,9 @@ def QuantizationTest1(file_name,Your_EncodedValues,Your_QuantizedValues):
         if abs(Your_QuantizedValues[i] - expectedQuantizedValues[i]) < 0.01:
             continue
         else:
+            print(i)
+            print(expectedQuantizedValues[i])
+            print(Your_QuantizedValues[i])
             print("QuantizationTest1 Test case failed, your QuantizedValues have different values from the expected one") 
             return
     print("QuantizationTest1 Test case passed successfully")

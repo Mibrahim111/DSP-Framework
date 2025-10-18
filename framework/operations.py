@@ -144,9 +144,10 @@ def quantization(sig: Signal, levels: int, name: str = "Quantized Signal"):
         indices = np.clip(indices, 0, levels - 1)
         q_midpoints = y_min + delta * (indices + 0.5)
 
-    error = y - q_midpoints
+    error = q_midpoints - y
     n_bits = int(np.ceil(np.log2(levels)))
     encoded = [format(int(i), f'0{n_bits}b') for i in indices]
+    
 
     quantized_signal = Signal(
         name=name,
@@ -155,5 +156,6 @@ def quantization(sig: Signal, levels: int, name: str = "Quantized Signal"):
         x=x.tolist(),
         y=q_midpoints.tolist()
     )
+    indices +=1 #to be 1-based
 
-    return quantized_signal, encoded, error
+    return quantized_signal, encoded, error,indices

@@ -137,6 +137,8 @@ class DSPGui:
         else:
             messagebox.showerror("Error", "Load a signal first!")
 
+
+
     def Quantize(self):
         if self.signal1 is None:
             messagebox.showerror("Error", "Load a signal first!")
@@ -147,29 +149,29 @@ class DSPGui:
             return
 
         try:
-            # quantization() returns (quantized_signal, bits, error)
-            self.signal1, self.bits, self.error = quantization(self.signal1, levels)
+            # quantization() -> returns (quantized_signal,bits,error,indices)
+            self.signal1, self.bits, self.error,self.indices = quantization(self.signal1, levels)
         except Exception as e:
             messagebox.showerror("Quantization Error", str(e))
             return
 
         os.makedirs("outputs", exist_ok=True)
         filename = f"outputs/quantized_signal.txt"
-
+    
         with open(filename, "w") as f:
             f.write(f"Levels: {levels}\n")
             f.write(f"Bits : {len(self.bits[0]) if self.bits else 0}\n\n")
             f.write(f"{'Index':>6} {'Encoded':>12} {'Quantized':>12} {'Error':>12}\n")
 
-            for i, (b, q, e) in enumerate(zip(self.bits, self.signal1.y, self.error)):
-                f.write(f"{i:6d} {b:>12} {float(q):12.6f} {float(e):12.6f}\n")
+            for i,(j,b, q, e) in enumerate(zip(self.indices,self.bits, self.signal1.y, self.error)):
+                f.write(f"{j:6d} {b:>12} {float(q):12.6f} {float(e):12.6f}\n")
 
         messagebox.showinfo(
-            "Signal Quantized",
-            f"Quantized signal saved to:\n{filename}"
+            "Signal Quantized"
         )
 
         print(f"Quantization complete. Results saved to: {filename}")
+
 
     def generate_new_signal(self):
         """Generates a new signal from a text file containing parameters."""
