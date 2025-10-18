@@ -15,6 +15,8 @@ from tests.QuanTest2 import QuantizationTest2
 
 sig = load_signal("/home/mohammed/repos/dsp/Inputs/Quan1_input.txt")
 q,enc,error,ind = quantization(sig,8)
+
+
 QuantizationTest1("/home/mohammed/repos/dsp/outputs/Quan1_Out.txt",enc,q.y)
 
 

@@ -138,39 +138,68 @@ class DSPGui:
             messagebox.showerror("Error", "Load a signal first!")
 
 
-
     def Quantize(self):
         if self.signal1 is None:
             messagebox.showerror("Error", "Load a signal first!")
             return
 
-        levels = simpledialog.askinteger("Quantization", "Enter Number of levels:")
-        if levels is None:
-            return
+        
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Quantization Settings")
+        dialog.geometry("300x250")
+        dialog.transient(self.root)
+        dialog.grab_set()  
 
-        try:
-            # quantization() -> returns (quantized_signal,bits,error,indices)
-            self.signal1, self.bits, self.error,self.indices = quantization(self.signal1, levels)
-        except Exception as e:
-            messagebox.showerror("Quantization Error", str(e))
-            return
+        choice_var = tk.StringVar(value="levels")
 
-        os.makedirs("outputs", exist_ok=True)
-        filename = f"outputs/quantized_signal.txt"
-    
-        with open(filename, "w") as f:
-            f.write(f"Levels: {levels}\n")
-            f.write(f"Bits : {len(self.bits[0]) if self.bits else 0}\n\n")
-            f.write(f"{'Index':>6} {'Encoded':>12} {'Quantized':>12} {'Error':>12}\n")
+        tk.Label(dialog, text="Select Input Type:", font=("Arial", 11, "bold")).pack(pady=10)
+        tk.Radiobutton(dialog, text="Number of Levels", variable=choice_var, value="levels").pack()
+        tk.Radiobutton(dialog, text="Number of Bits", variable=choice_var, value="bits").pack()
 
-            for i,(j,b, q, e) in enumerate(zip(self.indices,self.bits, self.signal1.y, self.error)):
-                f.write(f"{j:6d} {b:>12} {float(q):12.6f} {float(e):12.6f}\n")
+        tk.Label(dialog, text="Enter Value:").pack(pady=10)
+        value_entry = tk.Entry(dialog)
+        value_entry.pack()
 
-        messagebox.showinfo(
-            "Signal Quantized"
-        )
+        def on_confirm():
+            choice = choice_var.get()
+            try:
+                value = int(value_entry.get())
+                if value <= 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror("Invalid Input", "Please enter a positive integer.")
+                return
 
-        print(f"Quantization complete. Results saved to: {filename}")
+            levels = 2 ** value if choice == "bits" else value
+
+            if (levels & (levels-1)) != 0:
+                messagebox.showerror("Invalid Levels", "Number of levels must be a power of 2 (e.g., 2, 4, 8, 16...).")
+                return
+
+            dialog.destroy()
+
+            try:
+                # quantization() -> returns (quantized_signal,bits,error,indices)
+                assert self.signal1 is not None
+                self.signal1, bits, error, indices = quantization(self.signal1, levels)
+            except Exception as e:
+                messagebox.showerror("Quantization Error", str(e))
+                return
+
+            os.makedirs("outputs", exist_ok=True)
+            filename = f"outputs/quantized_signal.txt"
+
+            with open(filename, "w") as f:
+                f.write(f"Levels: {levels}\n")
+                f.write(f"Bits : {len(bits[0]) if bits else 0}\n\n")
+                f.write(f"{'Index':>6} {'Encoded':>12} {'Quantized':>12} {'Error':>12}\n")
+                for j, b, q, e in zip(indices, bits, self.signal1.y, error):
+                    f.write(f"{j:6d} {b:>12} {float(q):12.6f} {float(e):12.6f}\n")
+
+            messagebox.showinfo("Signal Quantized", f"Quantization complete.\nResults saved to: {filename}")
+            print(f"Quantization complete. Results saved to: {filename}")
+
+        tk.Button(dialog, text="OK", command=on_confirm).pack(pady=15)
 
 
     def generate_new_signal(self):
