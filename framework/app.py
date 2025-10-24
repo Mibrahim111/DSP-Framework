@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
+import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 import os
@@ -11,7 +12,8 @@ from operations import (
     square_signal,
     accumulate_signal,
     normalize_signal,
-    quantization
+    quantization,
+    fourier_transform
 )
 from signals import (Signal,generate_signal,read_gen_file)
 
@@ -37,6 +39,9 @@ class DSPGui:
         tk.Button(root, text="Square", command=self.square).pack(pady=3)
         tk.Button(root, text="Accumulate", command=self.accumulate).pack(pady=3)
         tk.Button(root, text="Quantize Signal", command=self.Quantize).pack(pady=3)
+        tk.Label(root, text="Frequency Domain", font=('Arial', 12, 'bold')).pack(pady=10)
+        tk.Button(root, text="Apply DFT/IDFT", command=self.apply_fourier).pack(pady=5)
+
 
 
         tk.Label(root, text="Normalization Range", font=('Arial', 12, 'bold')).pack(pady=10)
@@ -138,7 +143,7 @@ class DSPGui:
             messagebox.showerror("Error", "Load a signal first!")
 
 
-    def Quantize(self):
+    def Quantize(self):             
         if self.signal1 is None:
             messagebox.showerror("Error", "Load a signal first!")
             return
@@ -198,6 +203,134 @@ class DSPGui:
 
             messagebox.showinfo("Signal Quantized", f"Quantization complete.\nResults saved to: {filename}")
             print(f"Quantization complete. Results saved to: {filename}")
+
+        tk.Button(dialog, text="OK", command=on_confirm).pack(pady=15)
+
+
+    def apply_fourier(self):
+        if self.signal1 is None:
+            messagebox.showerror("Error", "Load a signal first!")
+            return
+
+        # First, ask for sampling frequency
+        fs = simpledialog.askfloat("Sampling Frequency", 
+                                "Enter sampling frequency in Hz:",
+                                minvalue=0.1, initialvalue=1.0)
+        if fs is None:  # User cancelled
+            return
+        
+        if fs <= 0:
+            messagebox.showerror("Error", "Sampling frequency must be positive!")
+            return
+
+        # Set sampling frequency for the signal
+        self.signal1.sample_rate = fs
+
+        # Ask for transform direction
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Fourier Transform Settings")
+        dialog.geometry("300x200")
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        inverse_var = tk.BooleanVar(value=False)
+        tk.Label(dialog, text="Select Transform Type:").pack(pady=10)
+        tk.Radiobutton(dialog, text="DFT (Forward)", variable=inverse_var, value=False).pack()
+        tk.Radiobutton(dialog, text="IDFT (Inverse)", variable=inverse_var, value=True).pack()
+
+        def on_confirm():
+            dialog.destroy()
+            inverse = inverse_var.get()
+
+            try:
+                # Apply Fourier Transform
+                assert self.signal1 is not None
+                result = fourier_transform(self.signal1, inverse=inverse)
+            except Exception as e:
+                messagebox.showerror("Error", f"Fourier Transform failed:\n{e}")
+                return
+
+            self.signal1 = result
+
+            # Create outputs directory
+            os.makedirs("outputs", exist_ok=True)
+            
+            if not inverse:
+                # ===== FORWARD DFT =====
+                filename = "outputs/DFT_output.txt"
+                
+                # Calculate actual frequencies in Hz
+                N = len(self.signal1.x)
+                frequencies = self.signal1.x * (fs / N)
+                
+                # Get actual amplitudes and phases
+                actual_amplitudes = self.signal1.y
+                phases = self.signal1.phase if self.signal1.phase is not None else np.zeros_like(actual_amplitudes)
+                
+                # Normalize amplitudes to 0-1 range for display
+                max_amp = np.max(actual_amplitudes) if np.max(actual_amplitudes) != 0 else 1
+                normalized_amplitudes = actual_amplitudes / max_amp
+                
+                # Save both actual and normalized results
+                with open(filename, "w") as f:
+                    f.write("DFT Results (Sampling Frequency: {} Hz)\n".format(fs))
+                    f.write("="*60 + "\n")
+                    f.write("ACTUAL VALUES:\n")
+                    f.write("{:>6} {:>20} {:>20}\n".format("Freq(Hz)", "Amplitude", "Phase(rad)"))
+                    for i, (freq, amp, ph) in enumerate(zip(frequencies, actual_amplitudes, phases)):
+                        f.write("{:8.2f} {:20.10f} {:20.10f}\n".format(freq, float(amp), float(ph)))
+                    
+                # ===== PLOTTING =====
+                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+                
+                # Plot 1: Frequency vs Normalized Amplitude (0-1)
+                ax1.stem(frequencies, normalized_amplitudes, basefmt=" ")
+                ax1.set_title("Frequency vs Normalized Amplitude (0-1)")
+                ax1.set_xlabel("Frequency (Hz)")
+                ax1.set_ylabel("Normalized Amplitude")
+                ax1.grid(True)
+                
+                # Plot 2: Frequency vs Phase
+                ax2.stem(frequencies, phases, basefmt=" ")
+                ax2.set_title("Frequency vs Phase")
+                ax2.set_xlabel("Frequency (Hz)")
+                ax2.set_ylabel("Phase (radians)")
+                ax2.grid(True)
+                
+                plt.tight_layout()
+                plt.show()
+                
+                messagebox.showinfo("DFT Complete", 
+                                f"Fourier Transform applied successfully!\n"
+                                f"Sampling Frequency: {fs} Hz\n"
+                                f"Results saved to: {filename}")
+                                
+            else:
+                # ===== INVERSE DFT =====
+                filename = "outputs/IDFT_output.txt"
+                
+                with open(filename, "w") as f:
+                    f.write("IDFT Results\n")
+                    f.write("="*40 + "\n")
+                    f.write("{:>6} {:>20}\n".format("Index", "Amplitude"))
+                    for i, y_val in enumerate(self.signal1.y):
+                        f.write("{:6d} {:20.10f}\n".format(i, float(y_val)))
+                
+                # Plot reconstructed signal
+                plt.figure(figsize=(10, 4))
+                if self.plot_mode.get() == "discrete":
+                    plt.stem(self.signal1.x, self.signal1.y, basefmt=" ")
+                else:
+                    plt.plot(self.signal1.x, self.signal1.y, 'b-o', markersize=3)
+                plt.title("Reconstructed Signal (IDFT)")
+                plt.xlabel("Sample Index")
+                plt.ylabel("Amplitude")
+                plt.grid(True)
+                plt.show()
+                
+                messagebox.showinfo("IDFT Complete", 
+                                f"Signal reconstructed successfully!\n"
+                                f"Results saved to: {filename}")
 
         tk.Button(dialog, text="OK", command=on_confirm).pack(pady=15)
 

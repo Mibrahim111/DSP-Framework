@@ -124,8 +124,8 @@ def accumulate_signal(sig: Signal, name: str = "Acc Signal") -> Signal:
 
 
 def quantization(sig: Signal, levels: int, name: str = "Quantized Signal"):
-    """Quantize samples in sig.y into `levels` uniform levels.
-    Returns: (quantized_signal, encoded, error)
+    """Quantize samples in sig.y into levels.
+    Returns: (quantized_signal, encoded, error, indices)
     """
     if levels <= 1:
         raise ValueError("levels must be > 1")
@@ -159,3 +159,66 @@ def quantization(sig: Signal, levels: int, name: str = "Quantized Signal"):
     indices +=1 #to be 1-based
 
     return quantized_signal, encoded, error,indices
+
+
+def fourier_transform(sig: Signal, inverse: bool = False, name: str = "Fourier Transform") -> Signal:
+    """
+    Computes the DFT or IDFT of a discrete signal.
+
+    Args:
+        sig (Signal): Input signal (time domain for DFT, frequency domain for IDFT).
+        inverse (bool): False for DFT, True for IDFT.
+        name (str): Name of the resulting signal.
+
+    Returns:
+        Signal: Frequency-domain (for DFT) or time-domain (for IDFT) signal.
+    """
+    if sig is None or sig.y is None:
+        raise ValueError("Invalid signal input for Fourier transform.")
+    
+    y = np.array(sig.y, dtype=complex)
+    N = len(y)
+    
+    if inverse:
+        if sig.phase is not None:
+            complex_vals = sig.y * np.exp(1j * sig.phase)
+        else:
+            complex_vals = y
+        
+        n = np.arange(N)
+        k = n.reshape((N, 1))
+        
+        exponent = 2j * np.pi * k * n / N
+        transform = np.dot(np.exp(exponent), complex_vals) / N
+        
+        time_samples = np.arange(N)
+        return Signal(
+            name=name,
+            signal_type=0,   # time domain
+            is_periodic=sig.is_periodic,
+            sample_rate=sig.sample_rate,
+            x=time_samples,
+            y=np.real(transform)  # remove j
+        )
+    else:
+        n = np.arange(N)
+        k = n.reshape((N, 1))
+        
+        exponent = -2j * np.pi * k * n / N
+        transform = np.dot(np.exp(exponent), y)
+        
+        # Calculate amplitude and phase
+        amplitude = np.abs(transform)
+        phase = np.angle(transform)
+        
+        IDX = np.arange(N)
+        
+        return Signal(
+            name=name,
+            signal_type=1,   # frequency domain Important
+            is_periodic=False,
+            sample_rate=sig.sample_rate,
+            x=IDX,
+            y=amplitude, 
+            phase=phase
+        )

@@ -1,0 +1,14 @@
+1. DFT : x(N) -> x(F)  && IDFT : x(F) -> x(N);;
+    USER should enter sampling frequency
+    frequency should be normalized (0~1)
+    graph : (a) frequency(x) vs amp (y)
+            (b) frequency(x) vs phase(y)
+            
+5. allow IDFT using same as DFT but with a flag for IDFT (same as DFT but with -1*)
+
+    
+2. display dom frequency (frequency with amp > 0.5)
+3. allow modification of amp and phase of the signal components?
+
+4. remove DC components (f(0))
+
