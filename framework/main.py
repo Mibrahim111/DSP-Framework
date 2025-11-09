@@ -13,7 +13,7 @@ from framework.operations import (
     normalize_signal,
     quantization,
     fourier_transform,
-    remove_dc_component
+    fast_fourier_transform
 )
 from tests.signalcompare import (
     SignalComapreAmplitude,
@@ -140,7 +140,7 @@ idft_input = Signal(
     phase=nf
 )
 
-trans = fourier_transform(idft_input,True)
+trans = fast_fourier_transform(idft_input,True)
 
 out = load_signal("/home/mohammed/repos/dsp/outputs/Output_Signal_IDFT.txt")
 

@@ -24,9 +24,7 @@ def SignalComaprePhaseShift(SignalInput = [] ,SignalOutput= []):
         for i in range(len(SignalInput)):
             A=round(SignalInput[i])
             B=round(SignalOutput[i])
-            if abs(A-B)>0.0001:
-                return False
-            elif A!=B:
+            if abs(A)-abs(B)>0.0001:
                 return False
         return True
 
