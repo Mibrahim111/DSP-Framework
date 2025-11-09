@@ -13,7 +13,8 @@ from operations import (
     accumulate_signal,
     normalize_signal,
     quantization,
-    fourier_transform
+    fourier_transform,
+    fast_fourier_transform
 )
 from signals import (Signal,generate_signal,read_gen_file)
 
@@ -33,16 +34,18 @@ class DSPGui:
         tk.Button(root, text="Generate Signal from File", command=self.generate_new_signal).pack(pady=5)
 
         tk.Label(root, text="Operations", font=('Arial', 12, 'bold')).pack(pady=10)
-        tk.Button(root, text="Add", command=self.add).pack(pady=3)
-        tk.Button(root, text="Subtract", command=self.subtract).pack(pady=3)
+        # tk.Button(root, text="Add", command=self.add).pack(pady=3)
+        # tk.Button(root, text="Subtract", command=self.subtract).pack(pady=3)
         tk.Button(root, text="Multiply by Constant", command=self.multiply_const).pack(pady=3)
         tk.Button(root, text="Square", command=self.square).pack(pady=3)
         tk.Button(root, text="Accumulate", command=self.accumulate).pack(pady=3)
         tk.Button(root, text="Quantize Signal", command=self.Quantize).pack(pady=3)
         tk.Label(root, text="Frequency Domain", font=('Arial', 12, 'bold')).pack(pady=10)
-        tk.Button(root, text="Apply DFT/IDFT", command=self.apply_fourier).pack(pady=5)
-
-
+        tk.Button(root, text="Apply FFT/IFFT", command=self.apply_fft).pack(pady=5)
+        # tk.Button(root, text="Apply DFT/IDFT", command=self.apply_fourier).pack(pady=5)
+        tk.Button(root, text="Display Dominant Frequencies", command=self.display_dominant_frequencies).pack(pady=5)
+        tk.Button(root, text="Remove DC Component (F(0))", command=self.remove_dc_component).pack(pady=5)
+        tk.Button(root, text="Modify Amplitude & Phase", command=self.modify_amplitude_phase).pack(pady=5)
 
         tk.Label(root, text="Normalization Range", font=('Arial', 12, 'bold')).pack(pady=10)
         norm_frame = tk.Frame(root)
@@ -284,14 +287,16 @@ class DSPGui:
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
                 
                 # Plot 1: Frequency vs Normalized Amplitude (0-1)
-                ax1.stem(frequencies, normalized_amplitudes, basefmt=" ")
+                ax1.plot(frequencies, normalized_amplitudes)
+                # ax1.stem(frequencies, normalized_amplitudes, basefmt=" ")
                 ax1.set_title("Frequency vs Normalized Amplitude (0-1)")
                 ax1.set_xlabel("Frequency (Hz)")
                 ax1.set_ylabel("Normalized Amplitude")
                 ax1.grid(True)
                 
                 # Plot 2: Frequency vs Phase
-                ax2.stem(frequencies, phases, basefmt=" ")
+                ax2.plot(frequencies, phases)
+                # ax2.stem(frequencies, phases, basefmt=" ")
                 ax2.set_title("Frequency vs Phase")
                 ax2.set_xlabel("Frequency (Hz)")
                 ax2.set_ylabel("Phase (radians)")
@@ -331,6 +336,121 @@ class DSPGui:
                 messagebox.showinfo("IDFT Complete", 
                                 f"Signal reconstructed successfully!\n"
                                 f"Results saved to: {filename}")
+
+        tk.Button(dialog, text="OK", command=on_confirm).pack(pady=15)
+
+
+
+    from operations import fast_fourier_transform  # make sure you import it at the top
+
+
+    def apply_fft(self):
+        if self.signal1 is None:
+            messagebox.showerror("Error", "Load a signal first!")
+            return
+
+        fs = simpledialog.askfloat(
+            "Sampling Frequency",
+            "Enter sampling frequency in Hz:",
+            minvalue=0.1,
+            initialvalue=1.0
+        )
+        if fs is None:
+            return
+        if fs <= 0:
+            messagebox.showerror("Error", "Sampling frequency must be positive!")
+            return
+
+        self.signal1.sample_rate = fs
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("FFT Settings")
+        dialog.geometry("300x200")
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        inverse_var = tk.BooleanVar(value=False)
+        tk.Label(dialog, text="Select Transform Type:").pack(pady=10)
+        tk.Radiobutton(dialog, text="FFT (Forward)", variable=inverse_var, value=False).pack()
+        tk.Radiobutton(dialog, text="IFFT (Inverse)", variable=inverse_var, value=True).pack()
+
+        def on_confirm():
+            dialog.destroy()
+            inverse = inverse_var.get()
+
+            try:
+                assert self.signal1 is not None
+                result = fast_fourier_transform(self.signal1, inverse=inverse)
+            except Exception as e:
+                messagebox.showerror("Error", f"FFT failed:\n{e}")
+                return
+
+            self.signal1 = result
+            os.makedirs("outputs", exist_ok=True)
+
+            if not inverse:
+                # ===== FORWARD FFT =====
+                filename = "outputs/FFT_output.txt"
+                N = len(self.signal1.x)
+                frequencies = self.signal1.x * (fs / N)
+                amplitudes = self.signal1.y
+                phases = self.signal1.phase if self.signal1.phase is not None else np.zeros_like(amplitudes)
+
+                max_amp = np.max(amplitudes) if np.max(amplitudes) != 0 else 1
+                normalized_amplitudes = amplitudes / max_amp
+
+                with open(filename, "w") as f:
+                    f.write(f"FFT Results (Sampling Frequency: {fs} Hz)\n")
+                    f.write("=" * 60 + "\n")
+                    f.write("{:>6} {:>20} {:>20}\n".format("Freq(Hz)", "Amplitude", "Phase(rad)"))
+                    for freq, amp, ph in zip(frequencies, amplitudes, phases):
+                        f.write(f"{freq:8.2f} {amp:20.10f} {ph:20.10f}\n")
+
+                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+                ax1.plot(frequencies, normalized_amplitudes)
+                ax1.set_title("Frequency vs Normalized Amplitude (FFT)")
+                ax1.set_xlabel("Frequency (Hz)")
+                ax1.set_ylabel("Normalized Amplitude")
+                ax1.grid(True)
+
+                ax2.plot(frequencies, phases)
+                ax2.set_title("Frequency vs Phase (FFT)")
+                ax2.set_xlabel("Frequency (Hz)")
+                ax2.set_ylabel("Phase (radians)")
+                ax2.grid(True)
+
+                plt.tight_layout()
+                plt.show()
+
+                messagebox.showinfo(
+                    "FFT Complete",
+                    f"FFT applied successfully!\nResults saved to: {filename}"
+                )
+            else:
+                # ===== INVERSE FFT =====
+                filename = "outputs/IFFT_output.txt"
+                with open(filename, "w") as f:
+                    f.write("IFFT Results\n")
+                    f.write("=" * 40 + "\n")
+                    f.write("{:>6} {:>20}\n".format("Index", "Amplitude"))
+                    for i, y_val in enumerate(self.signal1.y):
+                        f.write(f"{i:6d} {y_val:20.10f}\n")
+
+                plt.figure(figsize=(10, 4))
+                if self.plot_mode.get() == "discrete":
+                    plt.stem(self.signal1.x, self.signal1.y, basefmt=" ")
+                else:
+                    plt.plot(self.signal1.x, self.signal1.y, 'b-o', markersize=3)
+                plt.title("Reconstructed Signal (IFFT)")
+                plt.xlabel("Sample Index")
+                plt.ylabel("Amplitude")
+                plt.grid(True)
+                plt.show()
+
+                messagebox.showinfo(
+                    "IFFT Complete",
+                    f"Signal reconstructed successfully!\nResults saved to: {filename}"
+                )
 
         tk.Button(dialog, text="OK", command=on_confirm).pack(pady=15)
 
@@ -381,6 +501,196 @@ class DSPGui:
         plt.title(f"{mode.capitalize()} Signal Plot")
         plt.grid(True)
         plt.show()
+
+    def display_dominant_frequencies(self):
+        """Display frequencies with amplitude > 0.5 after applying Fourier Transform."""
+        if self.signal1 is None:
+            messagebox.showerror("Error", "Load and apply Fourier Transform first!")
+            return
+
+        if not hasattr(self.signal1, "phase") or self.signal1.phase is None:
+            messagebox.showerror("Error", "No Fourier Transform data found. Apply DFT first!")
+            return
+
+        try:
+            # Sampling frequency should have been stored
+            fs = getattr(self.signal1, "sample_rate", 1.0)
+            N = len(self.signal1.x)
+            frequencies = np.array(self.signal1.x) * (fs / N)
+            amplitudes = np.array(self.signal1.y, dtype=float)
+
+            # Normalize amplitudes between 0 and 1
+            max_amp = np.max(amplitudes) if np.max(amplitudes) != 0 else 1
+            normalized_amplitudes = amplitudes / max_amp
+
+            # Get dominant frequencies
+            threshold = 0.5
+            dominant_indices = np.where(normalized_amplitudes > threshold)[0]
+            dominant_freqs = frequencies[dominant_indices]
+            dominant_amps = normalized_amplitudes[dominant_indices]
+
+            if len(dominant_freqs) == 0:
+                messagebox.showinfo("Dominant Frequencies", "No frequencies found above 0.5 amplitude.")
+                return
+
+            # Plot with highlighted points
+            plt.figure(figsize=(10, 5))
+            plt.stem(frequencies, normalized_amplitudes, basefmt=" ", label="All Frequencies")
+            plt.scatter(dominant_freqs, dominant_amps, color='r', s=80, label="Dominant (>0.5)")
+            plt.title("Dominant Frequencies (Amplitude > 0.5)")
+            plt.xlabel("Frequency (Hz)")
+            plt.ylabel("Normalized Amplitude")
+            plt.grid(True)
+            plt.legend()
+            plt.show()
+
+
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to display dominant frequencies:\n{e}")
+
+    def remove_dc_component(self):
+
+        if self.signal1 is None:
+            messagebox.showerror("Error", "No signal loaded!")
+            return
+
+        if not hasattr(self.signal1, "y") or len(self.signal1.y) == 0:
+            messagebox.showerror("Error", "Invalid signal data!")
+            return
+
+        try:
+
+            if not hasattr(self.signal1, "phase") or self.signal1.phase is None:
+                messagebox.showerror("Error", "Apply Fourier Transform first!")
+                return
+
+            # Remove DC component (first frequency component)
+            original_dc = self.signal1.y[0]
+            self.signal1.y[0] = 0.0
+            if hasattr(self.signal1, "phase"):
+                self.signal1.phase[0] = 0.0
+
+            messagebox.showinfo("DC Component Removed", f"DC component (F(0)) = {original_dc:.4f} has been removed.")
+
+            # Optional: plot new amplitude spectrum
+            fs = getattr(self.signal1, "sample_rate", 1.0)
+            N = len(self.signal1.x)
+            frequencies = np.array(self.signal1.x) * (fs / N)
+            amplitudes = np.array(self.signal1.y, dtype=float)
+
+            max_amp = np.max(amplitudes) if np.max(amplitudes) != 0 else 1
+            normalized_amplitudes = amplitudes / max_amp
+
+            plt.figure(figsize=(10, 5))
+            plt.stem(frequencies, normalized_amplitudes, basefmt=" ")
+            plt.title("Amplitude Spectrum after Removing DC Component")
+            plt.xlabel("Frequency (Hz)")
+            plt.ylabel("Normalized Amplitude")
+            plt.grid(True)
+            plt.show()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to remove DC component:\n{e}")
+
+    def modify_amplitude_phase(self):
+        """Open a GUI to view and modify the amplitude and phase of each frequency component."""
+        if self.signal1 is None:
+            messagebox.showerror("Error", "No signal loaded!")
+            return
+
+        if not hasattr(self.signal1, "phase") or self.signal1.phase is None:
+            messagebox.showerror("Error", "Apply DFT first before modifying components!")
+            return
+
+        try:
+            fs = getattr(self.signal1, "sample_rate", 1.0)
+            N = len(self.signal1.x)
+            frequencies = np.array(self.signal1.x) * (fs / N)
+            amplitudes = np.array(self.signal1.y, dtype=float)
+            phases = np.array(self.signal1.phase, dtype=float)
+
+            # Create a new window for editing
+            edit_window = tk.Toplevel(self.root)
+            edit_window.title("Modify Amplitude and Phase")
+            edit_window.geometry("600x400")
+            edit_window.grab_set()
+
+            # Scrollable frame (in case of many frequencies)
+            canvas = tk.Canvas(edit_window)
+            scrollbar = tk.Scrollbar(edit_window, orient="vertical", command=canvas.yview)
+            scroll_frame = tk.Frame(canvas)
+
+            scroll_frame.bind(
+                "<Configure>",
+                lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+            )
+
+            canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+
+            # Header
+            tk.Label(scroll_frame, text="Freq(Hz)", font=("Arial", 10, "bold"), width=10).grid(row=0, column=0, padx=5,
+                                                                                               pady=5)
+            tk.Label(scroll_frame, text="Amplitude", font=("Arial", 10, "bold"), width=15).grid(row=0, column=1, padx=5,
+                                                                                                pady=5)
+            tk.Label(scroll_frame, text="Phase (rad)", font=("Arial", 10, "bold"), width=15).grid(row=0, column=2,
+                                                                                                  padx=5, pady=5)
+
+            # Entry fields for each frequency
+            amp_entries = []
+            phase_entries = []
+
+            for i, (freq, amp, ph) in enumerate(zip(frequencies, amplitudes, phases), start=1):
+                tk.Label(scroll_frame, text=f"{freq:.2f}", width=10).grid(row=i, column=0, padx=5, pady=2)
+                amp_var = tk.StringVar(value=f"{amp:.6f}")
+                ph_var = tk.StringVar(value=f"{ph:.6f}")
+
+                amp_entry = tk.Entry(scroll_frame, textvariable=amp_var, width=15)
+                ph_entry = tk.Entry(scroll_frame, textvariable=ph_var, width=15)
+                amp_entry.grid(row=i, column=1, padx=5, pady=2)
+                ph_entry.grid(row=i, column=2, padx=5, pady=2)
+
+                amp_entries.append(amp_var)
+                phase_entries.append(ph_var)
+
+            # Apply button
+            def apply_changes():
+                try:
+                    new_amplitudes = [float(a.get()) for a in amp_entries]
+                    new_phases = [float(p.get()) for p in phase_entries]
+
+                    # Update the signal data
+                    
+                    self.signal1.y = new_amplitudes
+                    self.signal1.phase = new_phases
+
+                    messagebox.showinfo("Updated", "Amplitude and phase values updated successfully!")
+
+                    # Optional: plot the modified spectrum
+                    plt.figure(figsize=(10, 5))
+                    plt.stem(frequencies, new_amplitudes, basefmt=" ", label="Modified Amplitude")
+                    plt.title("Modified Amplitude Spectrum")
+                    plt.xlabel("Frequency (Hz)")
+                    plt.ylabel("Amplitude")
+                    plt.grid(True)
+                    plt.legend()
+                    plt.show()
+
+                    edit_window.destroy()
+
+                except ValueError:
+                    messagebox.showerror("Error", "Please enter valid numeric values for all fields.")
+
+            tk.Button(scroll_frame, text="Apply Changes", command=apply_changes, bg="#4CAF50", fg="white").grid(
+                row=len(frequencies) + 1, column=0, columnspan=3, pady=10
+            )
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to modify components:\n{e}")
 
 
 if __name__ == "__main__":

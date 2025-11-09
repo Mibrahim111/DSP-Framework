@@ -18,7 +18,7 @@
 """
 from signals import Signal
 import numpy as np
-
+from typing import List , Tuple
 # internal validation function 
 
 def _validate_signals(sig1: Signal, sig2: Signal):
@@ -220,5 +220,72 @@ def fourier_transform(sig: Signal, inverse: bool = False, name: str = "Fourier T
             sample_rate=sig.sample_rate,
             x=IDX,
             y=amplitude, 
+            phase=phase
+        )
+    
+
+def fast_fourier_transform(sig: Signal, inverse: bool = False, name: str = "FFT Transform") -> Signal:
+    """
+    Computes the FFT or IFFT of a discrete signal using the Cooley-Tukey algorithm.
+
+    Args:
+        sig (Signal): Input signal (time domain for FFT, frequency domain for IFFT).
+        inverse (bool): False for FFT, True for IFFT.
+        name (str): Name of the resulting signal.
+
+    Returns:
+        Signal: Frequency-domain (for FFT) or time-domain (for IFFT) signal.
+    """
+    if sig is None or sig.y is None:
+        raise ValueError("Invalid signal input for FFT transform.")
+    
+    y = np.asarray(sig.y, dtype=complex)
+    N = len(y)
+
+    # Ensure power of 2 length
+    if N & (N - 1) != 0:
+        raise ValueError("Signal length must be a power of 2 for FFT.")
+
+    def _fft_recursive(x):
+        N = len(x)
+        if N <= 1:
+            return x
+        even = _fft_recursive(x[::2])
+        odd = _fft_recursive(x[1::2])
+        exp_factor = np.exp((-2j if not inverse else 2j) * np.pi * np.arange(N) / N)
+        half = N // 2
+        return np.concatenate([
+            even + exp_factor[:half] * odd,
+            even - exp_factor[:half] * odd
+        ])
+
+    # Perform FFT/IFFT
+    transform = _fft_recursive(y)
+    if inverse:
+        transform /= N
+
+    if inverse:
+        # Convert back to real time-domain signal
+        time_samples = np.arange(N)
+        return Signal(
+            name=name,
+            signal_type=0,  # time domain
+            is_periodic=sig.is_periodic,
+            sample_rate=sig.sample_rate,
+            x=time_samples,
+            y=np.real(transform)
+        )
+    else:
+        # FFT → magnitude and phase
+        amplitude = np.abs(transform)
+        phase = np.angle(transform)
+        IDX = np.arange(N)
+        return Signal(
+            name=name,
+            signal_type=1,  # frequency domain
+            is_periodic=False,
+            sample_rate=sig.sample_rate,
+            x=IDX,
+            y=amplitude,
             phase=phase
         )

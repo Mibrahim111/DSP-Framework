@@ -12,13 +12,16 @@ from framework.operations import (
     subtract_signals,
     normalize_signal,
     quantization,
-    fourier_transform
+    fourier_transform,
+    remove_dc_component
 )
 from tests.signalcompare import (
     SignalComapreAmplitude,
     SignalComaprePhaseShift
 )
-
+from tests.CompareSignals import (
+    SignalsAreEqual
+)
 def read_dft_file(path):
     """
     Reads a DFT output text file with this format:
@@ -142,14 +145,15 @@ trans = fourier_transform(idft_input,True)
 out = load_signal("/home/mohammed/repos/dsp/outputs/Output_Signal_IDFT.txt")
 
 a2 = SignalComapreAmplitude(trans.y,out.y)
-print(trans.y)
-print(out.y)
+# print(trans.y)
+# print(out.y)
 if a2 and amplitude_test and phase_test:
     print("Tests Passed Successfully")
 else:
     if not amplitude_test:
-        print("❌ Amplitude comparison failed")
+        print("Amplitude comparison failed")
     if not phase_test:
-        print("❌ Phase comparison failed")
+        print(" Phase comparison failed")
     if not a2 :
-        print("IDFT ERROR")
+        print("IDFT Amplitude Failed")
+

@@ -1,16 +1,24 @@
-import os
-import matplotlib.pyplot as plt
-from framework.signals import Signal
-from framework.signals import generate_signal
-from tests.Task1Test import *
-from tests.Task2Test import *
+import sys, os
+from docx import Document 
+import numpy as np
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-def list_gen_files(folder="."):
-    """List all signal generation parameter files (.txt)."""
-    return [f for f in os.listdir(folder) if f.endswith(".txt")]
-
-
-def main(): pass
- 
-if __name__ == "__main__":
-    main()
+from framework.signals import (
+    generate_signal,
+    Signal
+)
+from framework.fileHandling import load_signal,save_signal
+from framework.operations import (
+    subtract_signals,
+    normalize_signal,
+    quantization,
+    fourier_transform,
+    remove_dc_component
+)
+from tests.signalcompare import (
+    SignalComapreAmplitude,
+    SignalComaprePhaseShift
+)
+from tests.CompareSignals import (
+    SignalsAreEqual
+)
